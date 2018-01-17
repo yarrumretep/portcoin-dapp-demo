@@ -8,3 +8,6 @@ To run it should be as simple as:
 npm install
 npm start
 ```
+
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/yarrumretep/portcoin-dapp-demo.svg)](https://greenkeeper.io/)
