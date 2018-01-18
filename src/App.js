@@ -2,8 +2,10 @@ import React, { Component } from 'react';
 
 import contract from 'truffle-contract';
 import PortCoinSpec from './PortCoin.json';
+import PortMayorSpec from './PortMayor.json';
 
 const PortCoin = contract(PortCoinSpec);
+const PortMayor = contract(PortMayorSpec);
 
 const promise = (func) => new Promise((resolve, reject) => {
   try {
@@ -30,6 +32,7 @@ class App extends Component {
     var web3 = this.props.web3;
 
     PortCoin.setProvider(web3.currentProvider);
+    PortMayor.setProvider(web3.currentProvider);
 
     this.timer = setInterval(() => {
       promise(cb=>web3.eth.getAccounts(cb))
@@ -90,13 +93,18 @@ class App extends Component {
                 [log.transactionHash]: log
               }
             });
-            getPortBalance();
+            getPortBalance()
           }
         }));
 
         this.filters = filters;
         getPortBalance();
       })
+      .then(()=>PortMayor.deployed())
+      .then(mayor => mayor.owner())
+      .then(owner => this.setState({
+        owner: owner
+      }))
     }
   }
 
@@ -106,8 +114,40 @@ class App extends Component {
     if(window.confirm("Send " + amount + " to " + to + "?")) {
       PortCoin.deployed()
       .then(portcoin => {
-        portcoin.transfer(to, amount, {from: this.state.account});
+        portcoin.transfer(to, amount, {from: this.state.account})
+        .then(result => window.alert('tx mined!'));
       })
+    }
+  }
+
+  issue() {
+    var to = window.prompt("Enter destination address");
+    var amount = window.prompt("Enter quantity");
+    if(window.confirm("Issue " + amount + " to " + to + "?")) {
+      PortMayor.deployed()
+      .then(mayor => {
+        mayor.issue(to, amount, {from:this.state.account})
+        .then(result => window.alert('tx mined!'));
+      })
+    }
+  }
+
+  claim() {
+    var ticketString = window.prompt("Enter ticket json");
+    if(ticketString) {
+      var ticket = JSON.parse(ticketString);
+      PortMayor.deployed()
+      .then(mayor => mayor.attend(ticket.n, ticket.r, ticket.s, ticket.v, {from:this.state.account}))
+      .then(result => window.alert('tx mined!'));
+    }
+  }
+
+  register() {
+    var event = window.prompt("Enter event address");
+    if(event) {
+      PortMayor.deployed()
+      .then(mayor => mayor.createEvent(event, {from:this.state.account}))
+      .then(result=>window.alert('tx mined!'))
     }
   }
 
@@ -119,7 +159,14 @@ class App extends Component {
         <div>Account:{this.state.account}</div>
         <div>Balance:{this.state.balance}</div>
         <div>PORT:{this.state.portbalance}</div>
-        <a href="#" onClick={()=>this.transfer()}>Transfer</a>
+        <div><a href="#" onClick={()=>this.transfer()}>Transfer</a></div>
+        <div><a href="#" onClick={()=>this.claim()}>Claim</a></div>
+        {this.state.owner === this.state.account && (
+          <div>
+          <div><a href="#" onClick={()=>this.issue()}>Issue</a></div>
+          <div><a href="#" onClick={()=>this.register()}>Create Event</a></div>
+          </div>
+        )}
         <div>PORT Transactions:</div>
         <table border={1}>
           <thead>
